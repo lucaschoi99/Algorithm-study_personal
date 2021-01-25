@@ -1,5 +1,6 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.select import Select
 
 #chrome web driver path
 driver = webdriver.Chrome("C:\Chrome_Driver\chromedriver.exe")
@@ -18,9 +19,9 @@ dep.select_by_value("s1104000H1")
 major = Select(driver.find_element_by_xpath('/html/body/div[5]/form[2]/table/tbody/tr[1]/td[1]/span[4]/select'))
 major.select_by_value("0412")
 
-#년도(2020)
+#년도(2021)
 yr = Select(driver.find_element_by_xpath('/html/body/div[5]/form[2]/table/tbody/tr[1]/td[1]/span[7]/select'))
-yr.select_by_value("2020")
+yr.select_by_value("2021")
 
 #학기(1학기)
 semster = Select(driver.find_element_by_xpath('/html/body/div[5]/form[2]/table/tbody/tr[1]/td[1]/span[8]/select'))
@@ -39,7 +40,7 @@ while(True):
     try:
         subject = driver.find_element_by_xpath("/html/body/div[5]/form[2]/table/tbody/tr[3]/td/div/div[2]/div/div[3]/div[2]/div/div[" + str(cnt) + "]/div[9]/span")
         professor = driver.find_element_by_xpath("/html/body/div[5]/form[2]/table/tbody/tr[3]/td/div/div[2]/div/div[3]/div[2]/div/div[" + str(cnt) + "]/div[14]/span")
-        print(subject.text, end='/')
+        print(subject.text, end='| ')
         print(professor.text)
         
         cnt += 1 #next subject to fetch
