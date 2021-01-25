@@ -1,1 +1,233 @@
+# coding: utf-8
+
+import sys
+sys.path.append('..')
+import os
+import matplotlib.pyplot as plt
+import numpy as np
+    
+    
+# 간단한 텍스트 전처리
+def preprocess(text):
+    text = text.lower()
+    text = text.replace('.', ' .')
+    words = text.split(' ')
+
+    word_to_id = {}
+    id_to_word = {}
+    for word in words:
+        if word not in word_to_id:
+            new_id = len(word_to_id)
+            word_to_id[word] = new_id
+            id_to_word[new_id] = word
+
+    corpus = np.array([word_to_id[w] for w in words])
+
+    return corpus, word_to_id, id_to_word
+
+text=  "You say goodbye and I say HELLO."
+corpus, word_to_id, id_to_word = preprocess(text)
+
+
+# co-occurence matrix 만들기(context 고려하여 주변 단어의 빈도수 세기, window size=1)
+def create_co_matrix(corpus, vocab_size, window_size=1):
+    '''동시발생 행렬 생성
+    :param corpus: 말뭉치(단어 ID 목록)
+    :param vocab_size: 어휘 수
+    :param window_size: 윈도우 크기(윈도우 크기가 1이면 타깃 단어 좌우 한 단어씩이 맥락에 포함)
+    :return: 동시발생 행렬
+    '''
+    corpus_size = len(corpus)
+    co_matrix = np.zeros((vocab_size, vocab_size), dtype=np.int32)
+
+    for idx, word_id in enumerate(corpus):
+        for i in range(1, window_size + 1):
+            left_idx = idx - i
+            right_idx = idx + i
+
+            if left_idx >= 0:
+                left_word_id = corpus[left_idx]
+                co_matrix[word_id, left_word_id] += 1
+
+            if right_idx < corpus_size:
+                right_word_id = corpus[right_idx]
+                co_matrix[word_id, right_word_id] += 1
+
+    return co_matrix
+
+vocab_size = len(word_to_id)
+C = create_co_matrix(corpus, vocab_size)
+
+print("Co-occurence matrix")
+print(C)
+
+# positive pointwise Mutual information(ppmi) - 단독으로 출현하는 횟수를 고려한 동시발생 횟수 count(more efficient 지표)
+def ppmi(C, verbose=False, eps = 1e-8):
+    '''PPMI(점별 상호정보량) 생성
+    :param C: 동시발생 행렬
+    :param verbose: 진행 상황을 출력할지 여부
+    :return:
+    '''
+    M = np.zeros_like(C, dtype=np.float32)
+    N = np.sum(C)
+    S = np.sum(C, axis=0)
+    total = C.shape[0] * C.shape[1]
+    cnt = 0
+
+    for i in range(C.shape[0]):
+        for j in range(C.shape[1]):
+            pmi = np.log2(C[i, j] * N / (S[j]*S[i]) + eps)
+            M[i, j] = max(0, pmi)
+
+            if verbose:
+                cnt += 1
+                if cnt % (total//100) == 0:
+                    print('%.1f%% 완료' % (100*cnt/total))
+    return M
+
+print("-------------------------------------------------")
+W =ppmi(C)
+print("PPMI")
+print(W)
+
+
+# ppmi 의 문제점 개선- 어휘 수 증가함에 따라 벡터 차원도 증가. 대부분의 원소 0(중요도 떨어짐)
+# SVD- singular value decomposition (dimensionality reduction의 한 방법)
+U, S, V = np.linalg.svd(W)
+
+print("-------------------------------------------------")
+print("SVD")
+print(U)
+
+
+# Show graph
+for word, word_id in word_to_id.items():
+    plt.annotate(word, (U[word_id, 0], U[word_id, 1]))
+    
+print("-------------------------------------------------")
+print("Show Graph")
+plt.scatter(U[:,0], U[:,1], alpha = 0.5)
+plt.show()
+
+
+# PTB dataset
+# coding: utf-8
+import sys
+import os
+sys.path.append('..')
+
+try:
+    import urllib.request
+except ImportError:
+    raise ImportError('Use Python3!')
+import pickle
+import numpy as np
+
+
+url_base = 'https://raw.githubusercontent.com/tomsercu/lstm/master/data/'
+key_file = {
+    'train':'ptb.train.txt',
+    'test':'ptb.test.txt',
+    'valid':'ptb.valid.txt'
+}
+save_file = {
+    'train':'ptb.train.npy',
+    'test':'ptb.test.npy',
+    'valid':'ptb.valid.npy'
+}
+vocab_file = 'ptb.vocab.pkl'
+
+dataset_dir = os.path.dirname(os.path.abspath(__file__))
+
+
+def _download(file_name):
+    file_path = dataset_dir + '/' + file_name
+    if os.path.exists(file_path):
+        return
+
+    print('Downloading ' + file_name + ' ... ')
+
+    try:
+        urllib.request.urlretrieve(url_base + file_name, file_path)
+    except urllib.error.URLError:
+        import ssl
+        ssl._create_default_https_context = ssl._create_unverified_context
+        urllib.request.urlretrieve(url_base + file_name, file_path)
+
+    print('Done')
+
+
+def load_vocab():
+    vocab_path = dataset_dir + '/' + vocab_file
+
+    if os.path.exists(vocab_path):
+        with open(vocab_path, 'rb') as f:
+            word_to_id, id_to_word = pickle.load(f)
+        return word_to_id, id_to_word
+
+    word_to_id = {}
+    id_to_word = {}
+    data_type = 'train'
+    file_name = key_file[data_type]
+    file_path = dataset_dir + '/' + file_name
+
+    _download(file_name)
+
+    words = open(file_path).read().replace('\n', '<eos>').strip().split()
+
+    for i, word in enumerate(words):
+        if word not in word_to_id:
+            tmp_id = len(word_to_id)
+            word_to_id[word] = tmp_id
+            id_to_word[tmp_id] = word
+
+    with open(vocab_path, 'wb') as f:
+        pickle.dump((word_to_id, id_to_word), f)
+
+    return word_to_id, id_to_word
+
+
+def load_data(data_type='train'):
+    '''
+        :param data_type: 데이터 유형: 'train' or 'test' or 'valid (val)'
+        :return:
+    '''
+    if data_type == 'val': data_type = 'valid'
+    save_path = dataset_dir + '/' + save_file[data_type]
+
+    word_to_id, id_to_word = load_vocab()
+
+    if os.path.exists(save_path):
+        corpus = np.load(save_path)
+        return corpus, word_to_id, id_to_word
+
+    file_name = key_file[data_type]
+    file_path = dataset_dir + '/' + file_name
+    _download(file_name)
+
+    words = open(file_path).read().replace('\n', '<eos>').strip().split()
+    corpus = np.array([word_to_id[w] for w in words])
+
+    np.save(save_path, corpus)
+    return corpus, word_to_id, id_to_word
+
+
+if __name__ == '__main__':
+    for data_type in ('train', 'val', 'test'):
+        load_data(data_type)
+
+
+# PTB(적당히 큰 dataset) 이용한 더 직관적인 작업
+corpus, word_to_id, id_to_word = ptb.load_data('train')
+
+print('말뭉치 크기:', len(corpus))
+print('corpus[:30]:', corpus[:30])
+print()
+print('id_to_word[0]:', id_to_word[0])
+print('id_to_word[1]:', id_to_word[1])
+print('id_to_word[2]:', id_to_word[2])
+print()
+print("word_to_id['car']:", word_to_id['car'])
+print("word_to_id['happy']:", word_to_id['happy'])
+print("word_to_id['lexus']:", word_to_id['lexus'])
 
