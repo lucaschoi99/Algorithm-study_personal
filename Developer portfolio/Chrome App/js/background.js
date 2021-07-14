@@ -1,0 +1,11 @@
+const images = ["0.jpeg","1.jpeg","2.jpeg"];
+
+// Choose random images from the array
+const chosenImg = images[Math.floor(Math.random() * images.length)];
+
+// Create img tag
+const bgImg = document.createElement("img");
+bgImg.src = `img/${chosenImg}`;
+
+// Image tag to html document
+document.body.appendChild(bgImg);
