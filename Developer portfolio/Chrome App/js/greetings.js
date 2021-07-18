@@ -19,7 +19,7 @@ function handleSubmit(event){
 }
 
 function Greetings(username){
-    greeting.innerText = `Hello! ${username}`;
+    greeting.innerText = `Hello ${username}👋`;
     greeting.classList.remove(HIDDEN);
 }
 

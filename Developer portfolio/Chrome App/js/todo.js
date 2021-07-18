@@ -26,7 +26,7 @@ function makeToDo(todo){
     li.id = todo.id;
     const span = document.createElement("span");
     const button = document.createElement("button");
-    button.innerText = "X";
+    button.innerText = "❌";
     span.innerText = todo.text;
 
     // Button to delete ToDo element
