@@ -45,6 +45,7 @@ int main(void) {
 
     // a,n,t,i,c
     if(k < 5){ cout << 0; return 0;}
+    
     checkAlpha['a' - 'a'] = true;
     checkAlpha['n' - 'a'] = true;
     checkAlpha['t' - 'a'] = true;
