@@ -1,3 +1,4 @@
+---------- 처음 풀이 -----------
 num_list = []
 answer = []
 
@@ -87,3 +88,30 @@ def solution(dartResult):
         answer.append(value)
 
     return sum(answer)
+
+
+--------- 개선 풀이 ----------
+
+def solution(dartResult):
+    point = []
+    answer = []
+    dartResult = dartResult.replace('10','-')
+    point = ['10' if i == '-' else i for i in dartResult]
+
+    i = -1
+    sdt = ['S', 'D', 'T']
+    for j in point:
+        if j in sdt :
+            answer[i] = answer[i] ** (sdt.index(j)+1)
+        elif j == '*':
+            answer[i] = answer[i] * 2
+            if i != 0 :
+                answer[i - 1] = answer[i - 1] * 2
+        elif j == '#':
+            answer[i] = answer[i] * (-1)
+        else:
+            answer.append(int(j))
+            i += 1
+    return sum(answer)
+
+
